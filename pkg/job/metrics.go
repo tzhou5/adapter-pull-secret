@@ -2,19 +2,19 @@ package job
 
 import (
 	"context"
-	logger "github.com/openshift-online/ocm-service-common/pkg/ocmlogger"
 	"sync"
+
+	logger "github.com/openshift-online/ocm-service-common/pkg/ocmlogger"
 )
 
 type MetricsReporter interface {
 	Report(metricsCollector *MetricsCollector)
 }
 
-var mutex sync.Mutex
-
 // MetricsCollector uses locking to ensure we get point-in-time snapshot of the whole data. This snapshot data will be
 // then used to report metrics.
 type MetricsCollector struct {
+	mu          sync.Mutex
 	jobName     string
 	taskTotal   uint32
 	taskSuccess uint32
@@ -25,24 +25,23 @@ func NewMetricsCollector(jobName string) *MetricsCollector {
 	return &MetricsCollector{jobName: jobName}
 }
 
-// This method does not need to be thread-safe
 func (m *MetricsCollector) SetTaskTotal(total uint32) {
 	m.taskTotal = total
 }
 func (m *MetricsCollector) IncTaskSuccess() {
-	mutex.Lock()
+	m.mu.Lock()
 	m.taskSuccess++
-	mutex.Unlock()
+	m.mu.Unlock()
 }
 func (m *MetricsCollector) IncTaskFailed() {
-	mutex.Lock()
+	m.mu.Lock()
 	m.taskFailed++
-	mutex.Unlock()
+	m.mu.Unlock()
 }
 
 func (m *MetricsCollector) Snapshot() MetricsCollector {
-	mutex.Lock()
-	defer mutex.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	return MetricsCollector{
 		jobName:     m.jobName,

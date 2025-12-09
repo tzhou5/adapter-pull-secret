@@ -83,6 +83,7 @@ func (b *CommandBuilder) Build() *cobra.Command {
 		Long:  "Run job",
 	}
 	for _, job := range b.registry.jobs {
+		job := job // capture loop variable
 		subCmd := &cobra.Command{
 			Use:  job.GetMetadata().Use,
 			Long: job.GetMetadata().Description,
@@ -103,7 +104,7 @@ func (b *CommandBuilder) Build() *cobra.Command {
 				return nil
 			},
 		}
-		job.AddFlags(cmd.PersistentFlags())
+		job.AddFlags(subCmd.Flags())
 		cmd.AddCommand(subCmd)
 	}
 
@@ -121,8 +122,8 @@ type JobRegistry struct {
 	jobs []Job
 }
 
-func NewJobRegistry() JobRegistry {
-	return JobRegistry{}
+func NewJobRegistry() *JobRegistry {
+	return &JobRegistry{}
 }
 
 func (r *JobRegistry) AddJob(job Job) {
@@ -193,22 +194,22 @@ func (wp *workerPool) Run(ctx context.Context) {
 				func() {
 					taskId := ksuid.New().String()
 
-					ctx = AddTraceContext(ctx, "workerId", strconv.Itoa(workerId))
-					ctx = AddTraceContext(ctx, "taskName", task.TaskName())
-					ctx = AddTraceContext(ctx, "taskId", taskId)
+					taskCtx := AddTraceContext(ctx, "workerId", strconv.Itoa(workerId))
+					taskCtx = AddTraceContext(taskCtx, "taskName", task.TaskName())
+					taskCtx = AddTraceContext(taskCtx, "taskId", taskId)
 
-					defer func(ctx context.Context) {
+					defer func(taskCtx context.Context) {
 						if err := recover(); err != nil {
 							wp.MetricsCollector.IncTaskFailed()
-							logger.NewOCMLogger(ctx).Contextual().Error(fmt.Errorf("<panic summary should go here>"), fmt.Sprintf("[Task %s] Panick", task.TaskName()), "exception", err)
+							logger.NewOCMLogger(taskCtx).Contextual().Error(fmt.Errorf("<panic summary should go here>"), fmt.Sprintf("[Task %s] Panic", task.TaskName()), "exception", err)
 							if wp.PanicHandler != nil {
-								wp.PanicHandler(ctx, err)
+								wp.PanicHandler(taskCtx, err)
 							}
 						}
-					}(ctx)
+					}(taskCtx)
 
-					logger.NewOCMLogger(ctx).Contextual().Info("Processing task", "workerId", workerId, "taskId", taskId)
-					err := task.Process(ctx)
+					logger.NewOCMLogger(taskCtx).Contextual().Info("Processing task", "workerId", workerId, "taskId", taskId)
+					err := task.Process(taskCtx)
 					if err != nil {
 						wp.MetricsCollector.IncTaskFailed()
 						logger.NewOCMLogger(ctx).Contextual().Error(err, fmt.Sprintf("[Task %s] Failed", task.TaskName()))
@@ -254,7 +255,7 @@ func (jr jobRunner) Run(ctx context.Context, job Job, workerCount int) error {
 				jr.PanicHandler(ctx, err)
 			}
 
-			ulog.Contextual().Error(fmt.Errorf("<panic summary should go here>"), fmt.Sprintf("[Job %s] Panick", job.GetMetadata().Use), "exception", err)
+			ulog.Contextual().Error(fmt.Errorf("<panic summary should go here>"), fmt.Sprintf("[Job %s] Panic", job.GetMetadata().Use), "exception", err)
 			// We are purposefully re-throwing panic in main goroutine, so that job fails, and we don't suppress any errors.
 			// This is opposite of how we handle panic in worker pool, where we need to handle any panics from individual tasks
 			// so we can protect other workers from executing.
@@ -277,7 +278,8 @@ func (jr jobRunner) Run(ctx context.Context, job Job, workerCount int) error {
 	tasks, err := job.GetTasks()
 
 	if err != nil {
-		ulog.Contextual().Fatal(err, fmt.Sprintf("[Job %s] Error getting tasks", job.GetMetadata().Use))
+		ulog.Contextual().Error(err, fmt.Sprintf("[Job %s] Error getting tasks", job.GetMetadata().Use))
+		return err
 	}
 	for _, task := range tasks {
 		taskQueue.Add(task)
