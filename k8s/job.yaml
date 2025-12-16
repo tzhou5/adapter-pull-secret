@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pullsecret-test-job
+  namespace: default
+  labels:
+    app: pullsecret-adapter
+    job-type: test
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600  # Keep job for 1 hour after completion
+  template:
+    metadata:
+      labels:
+        app: pullsecret-adapter
+    spec:
+      serviceAccountName: pullsecret-adapter
+      restartPolicy: Never
+      containers:
+      - name: pull-secret
+        image: quay.io/ldornele/pull-secret:dev-f1bf914
+        imagePullPolicy: Always
+        env:
+        - name: GCP_PROJECT_ID
+          value: "sda-ccs-3"
+        - name: CLUSTER_ID
+          value: "cls-test-123"
+        - name: SECRET_NAME
+          value: "hyperfleet-cls-test-123-pull-secret"
+        - name: PULL_SECRET_DATA
+          value: '{"auths":{"registry.redhat.io":{"auth":"dGVzdDp0ZXN0","email":"test@example.com"}}}'
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
