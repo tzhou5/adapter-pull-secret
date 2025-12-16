@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: pullsecret-test-job
-  namespace: default
+  namespace: hyperfleet-system
   labels:
     app: pullsecret-adapter
     job-type: test

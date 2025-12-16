@@ -16,17 +16,17 @@ echo "Creating ServiceAccount with Workload Identity..."
 kubectl apply -f k8s/serviceaccount.yaml
 echo ""
 
-# Wait a bit for SA to be created
-sleep 2
+# Wait for ServiceAccount to be created
+kubectl wait --for=jsonpath='{.metadata.name}'=pullsecret-adapter sa/pullsecret-adapter --timeout=30s
 
 # Apply Job
 echo "Creating Job..."
 kubectl apply -f k8s/job.yaml
 echo ""
 
-# Wait for job to start
-echo "Waiting for job to start..."
-sleep 3
+# Wait for job to be created
+echo "Waiting for job to be ready..."
+kubectl wait --for=condition=ready pod -l app=pullsecret-adapter --timeout=60s || true
 
 # Show job status
 echo "Job status:"
@@ -39,7 +39,12 @@ kubectl get pods -l app=pullsecret-adapter
 echo ""
 
 # Get pod name
-POD_NAME=$(kubectl get pods -l app=pullsecret-adapter -o jsonpath='{.items[0].metadata.name}')
+POD_NAME=$(kubectl get pods -l app=pullsecret-adapter -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+
+if [ -z "$POD_NAME" ]; then
+  echo "Warning: No pod found yet. Use 'kubectl get pods -l app=pullsecret-adapter' to check status."
+  POD_NAME="<pod-name>"
+fi
 
 echo "===================================="
 echo "Job deployed successfully!"

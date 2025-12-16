@@ -155,4 +155,4 @@ Tests are automatically run in GitHub Actions on every pull request:
 - Build check
 - Test check with coverage report
 
-See `.github/workflows/ci.yml` for CI configuration.
+See `.github/workflows/ci.yml` for CI configuration on GitHub.

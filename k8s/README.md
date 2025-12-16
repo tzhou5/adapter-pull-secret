@@ -115,7 +115,7 @@ kubectl describe pod $(kubectl get pods -l app=pullsecret-adapter -o jsonpath='{
 Verify Workload Identity binding:
 ```bash
 # Check if SA exists
-kubectl get sa pullsecret-adapter-job -o yaml
+kubectl get sa pullsecret-adapter -o yaml
 
 # Check GCP IAM binding
 gcloud iam service-accounts get-iam-policy \
