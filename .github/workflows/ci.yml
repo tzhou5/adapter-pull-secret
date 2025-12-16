@@ -24,21 +24,16 @@ jobs:
         with:
           go-version: '1.23.9'
           cache: true
-          cache-dependency-path: adapter-pull-secret/go.sum
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           args: --timeout=5m
-          working-directory: adapter-pull-secret
 
   build:
     name: Build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: adapter-pull-secret
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -48,7 +43,6 @@ jobs:
         with:
           go-version: '1.23.9'
           cache: true
-          cache-dependency-path: adapter-pull-secret/go.sum
 
       - name: Download dependencies
         run: go mod download
@@ -64,9 +58,6 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: adapter-pull-secret
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -76,7 +67,6 @@ jobs:
         with:
           go-version: '1.23.9'
           cache: true
-          cache-dependency-path: adapter-pull-secret/go.sum
 
       - name: Download dependencies
         run: go mod download
@@ -88,6 +78,6 @@ jobs:
         uses: codecov/codecov-action@v4
         if: success()
         with:
-          files: ./adapter-pull-secret/coverage.txt
+          files: ./coverage.txt
           flags: unittests
           fail_ci_if_error: false
