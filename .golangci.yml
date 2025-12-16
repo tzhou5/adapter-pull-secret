@@ -28,8 +28,6 @@ linters-settings:
   govet:
     enable:
       - shadow
-    disable:
-      - check-shadowing
 
   errcheck:
     check-type-assertions: true
