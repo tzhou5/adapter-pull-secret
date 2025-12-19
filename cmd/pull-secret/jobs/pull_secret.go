@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
@@ -29,10 +30,6 @@ type PullSecretTask struct {
 	ClusterID    string
 	SecretName   string
 	DryRun       bool
-}
-
-var PullSecretJobArgs struct {
-	name string
 }
 
 type PullSecretJob struct {
@@ -327,7 +324,9 @@ func retryWithBackoff(ctx context.Context, fn func() error, maxRetries int) erro
 		if i < maxRetries-1 {
 			// Calculate backoff with jitter (±20%)
 			baseBackoff := time.Duration(1<<uint(i)) * time.Second
-			jitter := time.Duration(float64(baseBackoff) * 0.2)
+			jitterRange := float64(baseBackoff) * 0.2
+			// Random value between -20% and +20% of base backoff
+			jitter := time.Duration((rand.Float64()*2 - 1) * jitterRange)
 			backoff := baseBackoff + jitter
 
 			log.Printf("Retry %d/%d after %s: %v", i+1, maxRetries, backoff, err)
