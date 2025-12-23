@@ -1,5 +1,6 @@
 # golangci-lint configuration for HyperFleet Pull Secret Job
 # https://golangci-lint.run/usage/configuration/
+version: "2"
 
 run:
   timeout: 5m
@@ -28,8 +29,6 @@ linters-settings:
   govet:
     enable:
       - shadow
-    disable:
-      - check-shadowing
 
   errcheck:
     check-type-assertions: true
@@ -58,11 +57,11 @@ issues:
       linters:
         - errcheck
         - gosec
-    # Exclude pkg/job and pkg/config (external framework code)
-    - path: pkg/
-      linters:
-        - revive
-        - goimports
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
 
 output:
   formats:
