@@ -105,11 +105,11 @@ test:
 .PHONY: test
 
 # Run integration tests (requires testcontainers/podman)
-# Creates test/integration directory if it doesn't exist
+# Integration tests are located in ./test/integration/
 test-integration:
 	@echo "Running integration tests..."
 	@if [ -d "./test/integration" ] && [ -n "$$(find ./test/integration -name '*_test.go' 2>/dev/null)" ]; then \
-		go test -v -race -tags=integration -timeout=10m ./test/integration/...; \
+		go test -v -race -timeout=10m ./test/integration/...; \
 	else \
 		echo "No integration tests found in ./test/integration/"; \
 		echo "Skipping integration tests (placeholder for future tests)"; \
