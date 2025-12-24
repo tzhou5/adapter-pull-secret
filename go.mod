@@ -1,6 +1,6 @@
 module gitlab.cee.redhat.com/service/hyperfleet/mvp
 
-go 1.25.0
+go 1.23.9
 
 require (
 	cloud.google.com/go/secretmanager v1.11.5

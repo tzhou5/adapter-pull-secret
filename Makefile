@@ -5,8 +5,8 @@
 CGO_ENABLED := 0
 GOPATH ?= $(shell go env GOPATH)
 
-# Go version (aligned with hyperfleet-adapter team standard)
-GO_VERSION := go1.25.0
+# Go version
+GO_VERSION := go1.23.9
 
 # Version information
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
