@@ -256,21 +256,12 @@ func TestPullSecretJob_GetTasks(t *testing.T) {
 			},
 		},
 		{
-			name: "use fake pull secret when not provided",
+			name: "missing PULL_SECRET_DATA returns error",
 			envVars: map[string]string{
 				"GCP_PROJECT_ID": "test-project",
 				"CLUSTER_ID":     "cls-789",
 			},
-			expectError: false,
-			checkTask: func(t *testing.T, task PullSecretTask) {
-				if task.PullSecret == "" {
-					t.Error("expected fake pull secret data, got empty string")
-				}
-				// Verify it's valid JSON
-				if err := validatePullSecret(task.PullSecret); err != nil {
-					t.Errorf("fake pull secret is invalid: %v", err)
-				}
-			},
+			expectError: true,
 		},
 	}
 
