@@ -37,18 +37,24 @@ help: ## Display this help
 	@echo "HyperFleet MVP - Pull Secret Job"
 	@echo ""
 	@echo "Build Targets:"
-	@echo "  make binary               compile pull-secret binary"
+	@echo "  make build                compile pull-secret binary"
 	@echo "  make test                 run unit tests with coverage"
+	@echo "  make test-integration     run integration tests (requires podman)"
 	@echo "  make lint                 run golangci-lint"
+	@echo "  make fmt                  format code with gofmt/goimports"
+	@echo "  make mod-tidy             tidy Go module dependencies"
+	@echo "  make verify               run all verification checks (lint + test)"
 	@echo "  make image                build container image"
 	@echo "  make image-push           build and push container image"
 	@echo "  make image-dev            build and push to personal Quay registry"
 	@echo "  make clean                delete temporary generated files"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make binary"
+	@echo "  make build"
 	@echo "  make test"
+	@echo "  make test-integration"
 	@echo "  make lint"
+	@echo "  make verify"
 	@echo "  make image IMAGE_TAG=v1.0.0"
 	@echo "  make image-push IMAGE_TAG=v1.0.0"
 	@echo "  make image-dev QUAY_USER=myuser"
@@ -66,9 +72,9 @@ ifndef GOPATH
 endif
 .PHONY: check-gopath
 
-# Build pull-secret binary
+# Build pull-secret binary (HYPERFLEET-444: renamed from 'binary' to 'build')
 # CGO_ENABLED=0 produces a static binary (no libc dependency)
-binary: check-gopath
+build: check-gopath
 	@echo "Building pull-secret binary..."
 	CGO_ENABLED=$(CGO_ENABLED) go build \
 		-o pull-secret \
@@ -82,7 +88,7 @@ binary: check-gopath
 			echo "* WARNING: Your go version is not the expected $(GO_VERSION) *" | sed 's/./*/g'; \
 			printf '\033[0m\n'; \
 		)
-.PHONY: binary
+.PHONY: build
 
 ####################
 # Test & Lint Targets
@@ -90,13 +96,28 @@ binary: check-gopath
 
 # Run unit tests with coverage
 test:
-	@echo "Running tests with coverage..."
+	@echo "Running unit tests with coverage..."
 	go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 	@echo ""
 	@echo "Coverage report generated: coverage.txt"
 	@echo "View HTML coverage: go tool cover -html=coverage.txt"
 	@echo ""
 .PHONY: test
+
+# Run integration tests (requires testcontainers/podman)
+# Integration tests are located in ./test/integration/
+test-integration:
+	@echo "Running integration tests..."
+	@if [ -d "./test/integration" ] && [ -n "$$(find ./test/integration -name '*_test.go' 2>/dev/null)" ]; then \
+		go test -v -race -timeout=10m ./test/integration/...; \
+	else \
+		echo "No integration tests found in ./test/integration/"; \
+		echo "Skipping integration tests (placeholder for future tests)"; \
+	fi
+	@echo ""
+	@echo "Integration tests completed!"
+	@echo ""
+.PHONY: test-integration
 
 # Run golangci-lint
 # Install: https://golangci-lint.run/usage/install/
@@ -115,6 +136,30 @@ lint:
 	@echo "Linting passed!"
 	@echo ""
 .PHONY: lint
+
+# Format code with gofmt and goimports
+fmt:
+	@echo "Formatting code..."
+	@if which goimports > /dev/null 2>&1; then \
+		goimports -w .; \
+	else \
+		gofmt -w .; \
+	fi
+	@echo "Formatting complete."
+.PHONY: fmt
+
+# Tidy Go module dependencies
+mod-tidy:
+	@echo "Tidying Go modules..."
+	go mod tidy
+	go mod verify
+	@echo "Go modules tidied."
+.PHONY: mod-tidy
+
+# Run all verification checks (lint + test)
+verify: lint test
+	@echo "All verification checks passed!"
+.PHONY: verify
 
 ####################
 # Container Image Targets
