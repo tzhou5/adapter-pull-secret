@@ -20,7 +20,8 @@ import (
 
 func init() {
 	logger.SetTrimList([]string{"pull-secret", "pkg"})
-	_ = logger.SetLogLevel(logger.OCM_LOG_LEVEL_DEFAULT) //nolint:errcheck // Default log level, error can be safely ignored
+	//nolint:errcheck // Default log level, error can be safely ignored
+	_ = logger.SetLogLevel(logger.OCM_LOG_LEVEL_DEFAULT)
 }
 
 func main() {

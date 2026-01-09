@@ -58,7 +58,11 @@ type StdoutReporter struct {
 func (r StdoutReporter) Report(metricsCollector *MetricsCollector) {
 	// use snapshot for point-in-time data
 	snapshot := metricsCollector.Snapshot()
-	logger.NewOCMLogger(context.Background()).Contextual().Info("Printing metrics to STDOUT", "task_total", snapshot.taskTotal, "task_success", snapshot.taskSuccess, "task_failed", snapshot.taskFailed)
+	logger.NewOCMLogger(context.Background()).Contextual().Info(
+		"Printing metrics to STDOUT",
+		"task_total", snapshot.taskTotal,
+		"task_success", snapshot.taskSuccess,
+		"task_failed", snapshot.taskFailed)
 }
 
 func NewStdoutReporter() MetricsReporter {

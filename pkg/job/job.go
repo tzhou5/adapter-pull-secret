@@ -97,7 +97,13 @@ func (b *CommandBuilder) Build() *cobra.Command {
 				if b.metricsReporter == nil {
 					b.metricsReporter = NewStdoutReporter()
 				}
-				err = jobRunner{BeforeJob: b.beforeJob, AfterJob: b.afterJob, PanicHandler: b.panicHandler, MetricsReporter: b.metricsReporter}.Run(b.ctx, job, job.GetWorkerCount())
+				runner := jobRunner{
+					BeforeJob:       b.beforeJob,
+					AfterJob:        b.afterJob,
+					PanicHandler:    b.panicHandler,
+					MetricsReporter: b.metricsReporter,
+				}
+				err = runner.Run(b.ctx, job, job.GetWorkerCount())
 				if err != nil {
 					return err
 				}
@@ -201,7 +207,10 @@ func (wp *workerPool) Run(ctx context.Context) {
 					defer func(taskCtx context.Context) {
 						if err := recover(); err != nil {
 							wp.MetricsCollector.IncTaskFailed()
-							logger.NewOCMLogger(taskCtx).Contextual().Error(fmt.Errorf("<panic summary should go here>"), fmt.Sprintf("[Task %s] Panic", task.TaskName()), "exception", err)
+							logger.NewOCMLogger(taskCtx).Contextual().Error(
+								fmt.Errorf("<panic summary should go here>"),
+								fmt.Sprintf("[Task %s] Panic", task.TaskName()),
+								"exception", err)
 							if wp.PanicHandler != nil {
 								wp.PanicHandler(taskCtx, err)
 							}
@@ -241,7 +250,8 @@ type jobRunner struct {
 
 // Run executes the given job using a worker pool.
 //
-// It first invokes the BeforeJob hook (if defined). Then, it enqueues all tasks and delegates to worker pool for execution.
+// It first invokes the BeforeJob hook (if defined). Then, it enqueues all tasks
+// and delegates to worker pool for execution.
 // After all tasks are processed, the AfterJob hook is called.
 func (jr jobRunner) Run(ctx context.Context, job Job, workerCount int) error {
 	ctx = AddTraceContext(ctx, "jobName", job.GetMetadata().Use)
@@ -255,8 +265,11 @@ func (jr jobRunner) Run(ctx context.Context, job Job, workerCount int) error {
 				jr.PanicHandler(ctx, err)
 			}
 
-			ulog.Contextual().Error(fmt.Errorf("<panic summary should go here>"), fmt.Sprintf("[Job %s] Panic", job.GetMetadata().Use), "exception", err)
-			// We are purposefully re-throwing panic in main goroutine, so that job fails, and we don't suppress any errors.
+			ulog.Contextual().Error(
+				fmt.Errorf("<panic summary should go here>"),
+				fmt.Sprintf("[Job %s] Panic", job.GetMetadata().Use),
+				"exception", err)
+			// We are purposefully re-throwing panic in main goroutine
 			// This is opposite of how we handle panic in worker pool, where we need to handle any panics from individual tasks
 			// so we can protect other workers from executing.
 			panic(err)
@@ -286,11 +299,17 @@ func (jr jobRunner) Run(ctx context.Context, job Job, workerCount int) error {
 		taskTotal += 1
 	}
 	metricsCollector := NewMetricsCollector(job.GetMetadata().Use)
+	//nolint:gosec // G115: taskTotal is bounded by number of tasks (small value)
 	metricsCollector.SetTaskTotal(uint32(taskTotal))
 
 	ulog.Contextual().Info("queued all the tasks")
 
-	pool := workerPool{Queue: taskQueue, Workers: workerCount, PanicHandler: jr.PanicHandler, MetricsCollector: metricsCollector}
+	pool := workerPool{
+		Queue:            taskQueue,
+		Workers:          workerCount,
+		PanicHandler:     jr.PanicHandler,
+		MetricsCollector: metricsCollector,
+	}
 	pool.Run(ctx)
 
 	if jr.AfterJob != nil {
@@ -298,8 +317,9 @@ func (jr jobRunner) Run(ctx context.Context, job Job, workerCount int) error {
 		jr.AfterJob(ctx)
 	}
 
-	// For now, we report metrics only once at the end. In the future, we may need to support periodic reporting or
-	// synchronous updates (e.g., when counters are modified) to integrate with push-based systems like Prometheus Pushgateway.
+	// For now, we report metrics only once at the end. In the future, we may need
+	// to support periodic reporting or synchronous updates (e.g., when counters
+	// are modified) to integrate with push-based systems like Prometheus Pushgateway.
 	jr.MetricsReporter.Report(metricsCollector)
 
 	if metricsCollector.taskTotal == 0 {
@@ -334,6 +354,7 @@ func (tr TestRunner) Run(ctx context.Context, job Job, workerCount int) error {
 		taskTotal += 1
 	}
 	metricsCollector := NewMetricsCollector(job.GetMetadata().Use)
+	//nolint:gosec // G115: taskTotal is bounded by number of tasks (small value)
 	metricsCollector.SetTaskTotal(uint32(taskTotal))
 
 	pool := workerPool{Queue: taskQueue, Workers: workerCount, PanicHandler: nil, MetricsCollector: metricsCollector}

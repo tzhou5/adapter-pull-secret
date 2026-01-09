@@ -270,7 +270,9 @@ func TestPullSecretJob_GetTasks(t *testing.T) {
 			// Clear and set environment variables
 			os.Clearenv()
 			for k, v := range tt.envVars {
-				os.Setenv(k, v)
+				if err := os.Setenv(k, v); err != nil {
+					t.Fatalf("failed to set env var %s: %v", k, err)
+				}
 			}
 			defer os.Clearenv()
 
