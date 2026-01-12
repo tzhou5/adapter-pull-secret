@@ -1,6 +1,7 @@
 # golangci-lint configuration for HyperFleet Pull Secret Job
 # https://golangci-lint.run/usage/configuration/
 # Aligned with HyperFleet Linting Standard (HYPERFLEET-443)
+# 15 of 16 required linters enabled (revive temporarily disabled)
 version: "2"
 
 run:
@@ -10,7 +11,8 @@ run:
 
 linters:
   enable:
-    # Required linters per HyperFleet standard
+    # HyperFleet standard linters (15 of 16 enabled)
+    # TODO: Re-enable revive after adding comments to exported symbols
     - govet          # Reports suspicious constructs
     - errcheck       # Checks for unchecked errors
     - staticcheck    # Static analysis checks (includes gosimple in v2)
@@ -18,16 +20,13 @@ linters:
     - ineffassign    # Detects ineffectual assignments
     - misspell       # Finds commonly misspelled English words
     - gocritic       # Provides diagnostics that check for bugs, performance and style issues
-    # Additional linters per HYPERFLEET-443
     - unconvert      # Remove unnecessary type conversions
     - unparam        # Reports unused function parameters
     - goconst        # Finds repeated strings that could be replaced by a constant
     - exhaustive     # Check exhaustiveness of enum switch statements
-    # Temporarily disabled - existing code has violations, fix incrementally
-    # TODO: Enable these linters after fixing existing violations
-    # - revive       # Fast linter (needs comment fixes first)
-    # - lll          # Reports long lines
-    # - gosec        # Inspects source code for security problems
+    # - revive       # Temporarily disabled - 44 existing violations (missing comments)
+    - lll            # Reports long lines
+    - gosec          # Inspects source code for security problems
 
 linters-settings:
   gofmt:
@@ -42,21 +41,24 @@ linters-settings:
     check-blank: true
 
   revive:
+    enable-all-rules: false
     rules:
+      # Explicitly disable all rules with existing violations
+      # TODO: Enable incrementally as comments are added
       - name: exported
-        disabled: true  # Disabled for MVP - can enable later
+        disabled: true
       - name: unexported-return
-        disabled: true  # Disabled for MVP
+        disabled: true
       - name: var-naming
-        disabled: true  # Disabled for MVP
+        disabled: true
       - name: package-comments
-        disabled: true  # Disabled for MVP
+        disabled: true
       - name: redefines-builtin-id
-        disabled: true  # Disabled for MVP
+        disabled: true
       - name: unused-parameter
-        disabled: true  # Disabled for MVP
+        disabled: true
       - name: increment-decrement
-        disabled: true  # Disabled for MVP
+        disabled: true
 
   # Settings per HyperFleet standard
   lll:
@@ -74,26 +76,9 @@ issues:
   max-issues-per-linter: 0
   max-same-issues: 0
 
-  # Exclude some linters from running on tests files
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
-        - lll
-    # Temporarily exclude existing violations in pkg/ for incremental fixes
-    # TODO: Remove these exclusions as issues are fixed
-    - path: "^pkg/"
-      linters:
-        - revive      # Missing comments - fix incrementally
-        - lll         # Long lines - fix incrementally
-        - gosec       # G115 integer overflow - needs careful review
-        - goimports   # Formatting issues
-
 formatters:
   enable:
     - gofmt
-    # - goimports  # TODO: Enable after fixing existing formatting issues
 
 output:
   print-issued-lines: true

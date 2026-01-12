@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	pullSecretTaskName = "pull-secret-mvp"
+	pullSecretTaskName = "pull-secret-mvp" //nolint:gosec // G101: false positive, not a credential
 )
 
 type PullSecretTask struct {
@@ -91,7 +91,8 @@ func (pullsecretJob *PullSecretJob) GetMetadata() job.Metadata {
 }
 
 func (pullsecretJob *PullSecretJob) AddFlags(flags *pflag.FlagSet) {
-	flags.BoolVar(&pullsecretJob.DryRun, "dry-run", false, "Dry run mode - validate authentication and configuration without creating/updating secrets")
+	flags.BoolVar(&pullsecretJob.DryRun, "dry-run", false,
+		"Dry run mode - validate authentication and configuration without creating/updating secrets")
 }
 
 func (pullsecretJob *PullSecretJob) GetWorkerCount() int {
@@ -108,35 +109,44 @@ func (e PullSecretTask) Process(ctx context.Context) error {
 
 	// Validate pull secret JSON format
 	if err := validatePullSecret(e.PullSecret); err != nil {
-		logStructured("error", e.ClusterID, e.GCPProjectID, "validate-pull-secret", 0, fmt.Sprintf("Invalid pull secret format: %v", err), "")
+		logStructured("error", e.ClusterID, e.GCPProjectID, "validate-pull-secret", 0,
+			fmt.Sprintf("Invalid pull secret format: %v", err), "")
 		return fmt.Errorf("invalid pull secret format: %w", err)
 	}
 
 	if e.DryRun {
-		logStructured("info", e.ClusterID, e.GCPProjectID, "start", 0, "Starting pull secret storage operation (DRY RUN MODE)", "")
+		logStructured("info", e.ClusterID, e.GCPProjectID, "start", 0,
+			"Starting pull secret storage operation (DRY RUN MODE)", "")
 	} else {
-		logStructured("info", e.ClusterID, e.GCPProjectID, "start", 0, "Starting pull secret storage operation", "")
+		logStructured("info", e.ClusterID, e.GCPProjectID, "start", 0,
+			"Starting pull secret storage operation", "")
 	}
 
 	// Initialize Secret Manager client
 	client, err := secretmanager.NewClient(ctx)
 	if err != nil {
-		logStructured("error", e.ClusterID, e.GCPProjectID, "init-client", 0, fmt.Sprintf("Failed to create secretmanager client: %v", err), "")
+		logStructured("error", e.ClusterID, e.GCPProjectID, "init-client", 0,
+			fmt.Sprintf("Failed to create secretmanager client: %v", err), "")
 		return fmt.Errorf("failed to create secretmanager client: %w", err)
 	}
 	defer func() {
 		if closeErr := client.Close(); closeErr != nil {
-			logStructured("error", e.ClusterID, e.GCPProjectID, "close-client", 0, fmt.Sprintf("Failed to close client: %v", closeErr), "")
+			logStructured("error", e.ClusterID, e.GCPProjectID, "close-client", 0,
+				fmt.Sprintf("Failed to close client: %v", closeErr), "")
 		}
 	}()
 
-	logStructured("info", e.ClusterID, e.GCPProjectID, "client-initialized", 0, "Successfully initialized Secret Manager client", "")
+	logStructured("info", e.ClusterID, e.GCPProjectID, "client-initialized", 0,
+		"Successfully initialized Secret Manager client", "")
 
 	// In dry-run mode, skip actual secret operations
 	if e.DryRun {
-		logStructured("info", e.ClusterID, e.GCPProjectID, "dry-run", 0, "DRY RUN: Skipping secret creation/update operations", "")
-		logStructured("info", e.ClusterID, e.GCPProjectID, "dry-run", 0, fmt.Sprintf("DRY RUN: Would create/update secret: %s", e.SecretName), "")
-		logStructured("info", e.ClusterID, e.GCPProjectID, "completed", 0, "DRY RUN completed successfully - authentication validated", "")
+		logStructured("info", e.ClusterID, e.GCPProjectID, "dry-run", 0,
+			"DRY RUN: Skipping secret creation/update operations", "")
+		logStructured("info", e.ClusterID, e.GCPProjectID, "dry-run", 0,
+			fmt.Sprintf("DRY RUN: Would create/update secret: %s", e.SecretName), "")
+		logStructured("info", e.ClusterID, e.GCPProjectID, "completed", 0,
+			"DRY RUN completed successfully - authentication validated", "")
 		return nil
 	}
 
@@ -144,7 +154,8 @@ func (e PullSecretTask) Process(ctx context.Context) error {
 	if err := retryWithBackoff(ctx, func() error {
 		return e.createOrUpdateSecret(ctx, client)
 	}, 3); err != nil {
-		logStructured("error", e.ClusterID, e.GCPProjectID, "create-update-secret", 0, fmt.Sprintf("Failed to create/update secret: %v", err), "")
+		logStructured("error", e.ClusterID, e.GCPProjectID, "create-update-secret", 0,
+			fmt.Sprintf("Failed to create/update secret: %v", err), "")
 		return err
 	}
 
@@ -152,7 +163,8 @@ func (e PullSecretTask) Process(ctx context.Context) error {
 	if err := retryWithBackoff(ctx, func() error {
 		return e.verifySecret(ctx, client)
 	}, 3); err != nil {
-		logStructured("error", e.ClusterID, e.GCPProjectID, "verify-secret", 0, fmt.Sprintf("Failed to verify secret: %v", err), "")
+		logStructured("error", e.ClusterID, e.GCPProjectID, "verify-secret", 0,
+			fmt.Sprintf("Failed to verify secret: %v", err), "")
 		return err
 	}
 
@@ -190,25 +202,30 @@ func (e PullSecretTask) createOrUpdateSecret(ctx context.Context, client *secret
 
 	if !exists {
 		// Create new secret
-		logStructured("info", e.ClusterID, e.GCPProjectID, "create-secret", 0, fmt.Sprintf("Creating new secret: %s", e.SecretName), "")
+		logStructured("info", e.ClusterID, e.GCPProjectID, "create-secret", 0,
+			fmt.Sprintf("Creating new secret: %s", e.SecretName), "")
 		if createErr := e.createSecret(ctx, client); createErr != nil {
 			return fmt.Errorf("failed to create secret: %w", createErr)
 		}
 		duration := time.Since(startTime).Milliseconds()
-		logStructured("info", e.ClusterID, e.GCPProjectID, "create-secret", duration, "Successfully created secret", "")
+		logStructured("info", e.ClusterID, e.GCPProjectID, "create-secret", duration,
+			"Successfully created secret", "")
 	} else {
-		logStructured("info", e.ClusterID, e.GCPProjectID, "secret-exists", 0, fmt.Sprintf("Secret already exists: %s", e.SecretName), "")
+		logStructured("info", e.ClusterID, e.GCPProjectID, "secret-exists", 0,
+			fmt.Sprintf("Secret already exists: %s", e.SecretName), "")
 	}
 
 	// Add secret version with data
 	startTime = time.Now()
-	logStructured("info", e.ClusterID, e.GCPProjectID, "add-secret-version", 0, "Adding secret version with pull secret data", "")
+	logStructured("info", e.ClusterID, e.GCPProjectID, "add-secret-version", 0,
+		"Adding secret version with pull secret data", "")
 	version, err := e.addSecretVersion(ctx, client)
 	if err != nil {
 		return fmt.Errorf("failed to add secret version: %w", err)
 	}
 	duration := time.Since(startTime).Milliseconds()
-	logStructured("info", e.ClusterID, e.GCPProjectID, "add-secret-version", duration, "Successfully created secret version", version)
+	logStructured("info", e.ClusterID, e.GCPProjectID, "add-secret-version", duration,
+		"Successfully created secret version", version)
 
 	return nil
 }
@@ -290,7 +307,8 @@ func (e PullSecretTask) verifySecret(ctx context.Context, client *secretmanager.
 	}
 
 	duration := time.Since(startTime).Milliseconds()
-	logStructured("info", e.ClusterID, e.GCPProjectID, "verify-secret", duration, fmt.Sprintf("Verified secret (%d bytes)", len(result.Payload.Data)), "")
+	logStructured("info", e.ClusterID, e.GCPProjectID, "verify-secret", duration,
+		fmt.Sprintf("Verified secret (%d bytes)", len(result.Payload.Data)), "")
 
 	return nil
 }
@@ -330,9 +348,11 @@ func retryWithBackoff(ctx context.Context, fn func() error, maxRetries int) erro
 
 		if i < maxRetries-1 {
 			// Calculate backoff with jitter (±20%)
+			//nolint:gosec // G115: i is bounded by maxRetries (small value)
 			baseBackoff := time.Duration(1<<uint(i)) * time.Second
 			jitterRange := float64(baseBackoff) * 0.2
 			// Random value between -20% and +20% of base backoff
+			//nolint:gosec // G404: weak random is acceptable for jitter calculation
 			jitter := time.Duration((rand.Float64()*2 - 1) * jitterRange)
 			backoff := baseBackoff + jitter
 

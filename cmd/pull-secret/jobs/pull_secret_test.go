@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -267,12 +266,11 @@ func TestPullSecretJob_GetTasks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Clear and set environment variables
-			os.Clearenv()
+			// Set environment variables using t.Setenv for proper test isolation
+			// t.Setenv automatically restores the original value after the test
 			for k, v := range tt.envVars {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer os.Clearenv()
 
 			job := &PullSecretJob{}
 			tasks, err := job.GetTasks()
