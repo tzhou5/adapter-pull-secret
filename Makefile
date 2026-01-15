@@ -196,7 +196,8 @@ image-dev: ## Build and push to personal Quay registry
 		exit 1; \
 	fi
 	@echo "Building dev image quay.io/$(QUAY_USER)/$(IMAGE_NAME):$(DEV_TAG)..."
-	$(CONTAINER_TOOL) build -t quay.io/$(QUAY_USER)/$(IMAGE_NAME):$(DEV_TAG) .
+	@echo "  Commit: $(COMMIT)"
+	$(CONTAINER_TOOL) build --platform linux/amd64 --build-arg GIT_COMMIT=$(COMMIT) -t quay.io/$(QUAY_USER)/$(IMAGE_NAME):$(DEV_TAG) .
 	@echo "Pushing dev image quay.io/$(QUAY_USER)/$(IMAGE_NAME):$(DEV_TAG)..."
 	$(CONTAINER_TOOL) push quay.io/$(QUAY_USER)/$(IMAGE_NAME):$(DEV_TAG)
 .PHONY: image-dev

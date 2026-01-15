@@ -5,23 +5,20 @@ FROM registry.access.redhat.com/ubi9/go-toolset:1.23 AS builder
 # Git commit passed from build machine (avoids needing git in container)
 ARG GIT_COMMIT=unknown
 
-# Switch to root to set up workspace
+# Build as root in builder stage (safe - final image uses non-root USER 1000)
 USER root
 
 # Set working directory
 WORKDIR /workspace
 
 # Copy go mod files
-COPY --chown=default:root go.mod go.sum ./
+COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download
 
 # Copy source code
-COPY --chown=default:root . .
-
-# Switch back to default user
-USER default
+COPY . .
 
 # Build binary using make to include version, commit, and build date
 RUN make build GIT_COMMIT=${GIT_COMMIT}
