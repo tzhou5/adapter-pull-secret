@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 
 	logger "github.com/openshift-online/ocm-service-common/pkg/ocmlogger"
 	"github.com/spf13/cobra"
@@ -16,6 +17,13 @@ import (
 	// This will be a noop in non-containerized environments and also obeys the GOMAXPROCS
 	// env override.
 	_ "go.uber.org/automaxprocs"
+)
+
+// Build-time variables set via ldflags
+var (
+	version   = "dev"
+	commit    = "unknown"
+	buildDate = "unknown"
 )
 
 func init() {
@@ -41,6 +49,19 @@ func main() {
 		Use:  "pull-secret",
 		Long: "pull-secret job runner",
 	}
+
+	// Version command
+	versionCmd := &cobra.Command{
+		Use:   "version",
+		Short: "Print version information",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("pull-secret version info:")
+			fmt.Printf("  Version:    %s\n", version)
+			fmt.Printf("  Commit:     %s\n", commit)
+			fmt.Printf("  Built:      %s\n", buildDate)
+		},
+	}
+	rootCmd.AddCommand(versionCmd)
 
 	// Add job command
 	jobCmd := jobs.NewJobCommand(ctx)

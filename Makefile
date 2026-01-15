@@ -10,7 +10,16 @@ GO_VERSION := go1.23.9
 
 # Version information
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+# GIT_COMMIT can be passed from make image via --build-arg, falls back to git command
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+COMMIT := $(GIT_COMMIT)
+BUILD_DATE ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+# LDFLAGS for embedding version info into binary
+LDFLAGS := -w -s
+LDFLAGS += -X main.version=$(VERSION)
+LDFLAGS += -X main.commit=$(COMMIT)
+LDFLAGS += -X main.buildDate=$(BUILD_DATE)
 
 # Container tool (podman or docker)
 CONTAINER_TOOL ?= $(shell command -v podman 2>/dev/null || echo docker)
@@ -74,10 +83,13 @@ endif
 
 # Build pull-secret binary (HYPERFLEET-444: renamed from 'binary' to 'build')
 # CGO_ENABLED=0 produces a static binary (no libc dependency)
+# LDFLAGS embeds version, commit, and build date into the binary
 build: check-gopath
 	@echo "Building pull-secret binary..."
+	@echo "  Version: $(VERSION), Commit: $(COMMIT), BuildDate: $(BUILD_DATE)"
 	@mkdir -p bin
 	CGO_ENABLED=$(CGO_ENABLED) go build \
+		-ldflags="$(LDFLAGS)" \
 		-o bin/pull-secret \
 		./cmd/pull-secret
 	@echo "Binary built: ./bin/pull-secret"
@@ -168,7 +180,8 @@ verify: lint test
 
 image: ## Build container image with configurable registry/tag
 	@echo "Building image $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)..."
-	$(CONTAINER_TOOL) build -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG) .
+	@echo "  Commit: $(COMMIT)"
+	$(CONTAINER_TOOL) build --platform linux/amd64 --build-arg GIT_COMMIT=$(COMMIT) -t $(IMAGE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG) .
 .PHONY: image
 
 image-push: image ## Build and push container image
